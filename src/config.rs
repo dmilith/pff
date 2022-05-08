@@ -20,10 +20,10 @@ pub struct Config {
     buffer: usize,
 
     #[serde(with = "serde_regex")]
-    wanted: Vec<Regex>,
+    wanted: Regex,
 
     #[serde(with = "serde_regex")]
-    unwanted: Vec<Regex>,
+    unwanted: Regex,
 }
 
 
@@ -33,8 +33,8 @@ impl Default for Config {
             spammers_file: "/etc/spammers".to_string(),
             access_log: "/Services/Nginx/logs/access.log.gz".to_string(),
             buffer: 65535usize,
-            wanted: vec![ Regex::new(r"(/.well-known|\.svg|verknowsys|robots\.txt|favicon\.ico|[[:alnum:]]{32}\.p[dn][fg]|\.m[4kop][34av]|sitemap.xml|\.wasm)").unwrap()],
-            unwanted: vec![Regex::new(r"(\.php|XDEBUG|config\.*|login\.|\.DS_Store|mifs|\.axd|wp-*|\.aws|\.[axy]ml|\.[aj]sp*|microsoft|\.env|\\x\d+|\.cgi|cgi-bin|HNAP1|formLogin|owa/auth/x|/dev|/tmp|/var/tmp)").unwrap()],
+            wanted: Regex::new(r"(/robots\.txt|favicon\.ico|\.m[4kop][34av]|sitemap.xml|/.well-known|\.svg|verknowsys|\.wasm|[[:alnum:]]{32}\.p[dn][fg])").unwrap(),
+            unwanted: Regex::new(r"(\.php|XDEBUG|config\.*|login\.|\.DS_Store|mifs|\.axd|wp-*|\.aws|\.[axy]ml|\.[aj]sp*|microsoft|\.env|\\x\d+|\.cgi|cgi-bin|HNAP1|formLogin|owa/auth/x|/dev|/tmp|/var/tmp)").unwrap(),
         }
     }
 }
@@ -99,11 +99,11 @@ impl Config {
         Config::load().buffer
     }
 
-    pub fn wanted() -> Vec<Regex> {
+    pub fn wanted() -> Regex {
         Config::load().wanted
     }
 
-    pub fn unwanted() -> Vec<Regex> {
+    pub fn unwanted() -> Regex {
         Config::load().unwanted
     }
 

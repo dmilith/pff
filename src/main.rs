@@ -17,8 +17,8 @@ lazy_static! {
     static ref IP: Regex = Regex::new(r"(?P<ip>(\d+\.\d+\.\d+\.\d+))").unwrap();
 
     /// WANTED have higher priority over UNWANTED
-    static ref WANTED: Vec<Regex> = Config::wanted();
-    static ref UNWANTED: Vec<Regex> = Config::unwanted();
+    static ref WANTED: Regex = Config::wanted();
+    static ref UNWANTED: Regex = Config::unwanted();
 
 }
 
@@ -90,18 +90,16 @@ fn main() {
                 match &IP.captures(&line) {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
-                        for w_reg in WANTED.iter() {
-                            if w_reg.is_match(&line) {
-                                debug!("Detected normal request: {line} from IPv4: {ip}");
-                            }
+                        let w_reg = &WANTED;
+                        if w_reg.is_match(&line) {
+                            debug!("Detected normal request: {line} from IPv4: {ip}");
                         }
-                        for w_reg in UNWANTED.iter() {
-                            if w_reg.is_match(&line) {
+                        let w_reg = &UNWANTED;
+                        if w_reg.is_match(&line) {
                                 warn!("Detected malicious request from IPv4: {ip}");
                                 add_ip_to_spammers(ip);
                                 break;
                             }
-                        }
                     }
                     None => {
                         error!("Error: No IP match in line: '{line}'");
@@ -172,25 +170,23 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"67.71.13.196 - - [10/Nov/2021:06:59:29 +0100] "GET /login.action HTTP/1.1" 404 153 "-" "l9explore/1.3.0""#,
     ];
 
-    for w_reg in WANTED.iter() {
-        for this in wanted {
-            dbg!(w_reg, this);
-            assert!(w_reg.is_match(this));
-        }
-        for this in unwanted {
-            dbg!(w_reg, this);
-            assert!(!w_reg.is_match(this));
-        }
+    let w_reg = &WANTED;
+    for this in wanted {
+        // dbg!(w_reg, this);
+        assert!(w_reg.is_match(this));
+    }
+    for this in unwanted {
+        // dbg!(w_reg, this);
+        assert!(!w_reg.is_match(this));
     }
 
-    for w_reg in UNWANTED.iter() {
-        for this in wanted {
-            dbg!(w_reg, this);
-            assert!(!w_reg.is_match(this));
-        }
-        for this in unwanted {
-            dbg!(w_reg, this);
-            assert!(w_reg.is_match(this));
-        }
+    let w_reg = &UNWANTED;
+    for this in wanted {
+        // dbg!(w_reg, this);
+        assert!(!w_reg.is_match(this));
+    }
+    for this in unwanted {
+        // dbg!(w_reg, this);
+        assert!(w_reg.is_match(this));
     }
 }
