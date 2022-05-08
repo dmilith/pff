@@ -67,12 +67,9 @@ fn main() {
     let maybe_log = maybe_log
         .map(|input_data| {
             let input_data_length = input_data.len();
-            let input_data: Vec<u8> = input_data
-                .iter()
-                .skip(input_data_length - 16384)
-                .cloned()
-                .collect();
-            input_data
+            let buffer = input_data_length - Config::buffer();
+            info!("The uncompressed input file is at position: {buffer}.");
+            input_data.iter().skip(buffer).cloned().collect::<Vec<u8>>()
         })
         .map(|input_contents| {
             let contents = String::from_utf8_lossy(&input_contents);
@@ -95,32 +92,35 @@ fn main() {
                         let ip = &ip_match[0];
                         for w_reg in WANTED.iter() {
                             if w_reg.is_match(&line) {
-                                println!("Detected normal request: {line} from IPv4: {ip}");
+                                debug!("Detected normal request: {line} from IPv4: {ip}");
                             }
                         }
                         for w_reg in UNWANTED.iter() {
                             if w_reg.is_match(&line) {
-                                println!("Detected malicious request: {line} from IPv4: {ip}");
+                                warn!("Detected malicious request: {line} from IPv4: {ip}");
+                                add_ip_to_spammers(ip);
                                 break;
                             }
                         }
                     }
                     None => {
-                        eprintln!("Error: No IP match in line: '{line}'");
+                        error!("Error: No IP match in line: '{line}'");
                     }
                 }
             }
+            reload_firewall_rules();
         }
         Err(reason) => {
-            eprintln!("Error reading the input file because of the: {reason}")
+            error!("Error reading the input file because of the: {reason}")
         }
     }
 }
 
 
 /// is_partial returns true when the line doesn't begin with an IP octet:
+#[instrument]
 fn is_partial(line: &str) -> bool {
-    !line.starts_with(char::is_numeric)
+    !IP.is_match(line)
 }
 
 
