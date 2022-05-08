@@ -17,8 +17,8 @@ lazy_static! {
     static ref IP: Regex = Regex::new(r"(?P<ip>(\d+\.\d+\.\d+\.\d+))").unwrap();
 
     /// WANTED have higher priority over UNWANTED
-    static ref WANTED: Vec<Regex> = Config::wanted().unwrap_or_default();
-    static ref UNWANTED: Vec<Regex> = Config::unwanted().unwrap_or_default();
+    static ref WANTED: Vec<Regex> = Config::wanted();
+    static ref UNWANTED: Vec<Regex> = Config::unwanted();
 
 }
 
@@ -97,7 +97,7 @@ fn main() {
                         }
                         for w_reg in UNWANTED.iter() {
                             if w_reg.is_match(&line) {
-                                warn!("Detected malicious request: {line} from IPv4: {ip}");
+                                warn!("Detected malicious request from IPv4: {ip}");
                                 add_ip_to_spammers(ip);
                                 break;
                             }
