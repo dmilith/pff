@@ -96,10 +96,9 @@ fn main() {
                         }
                         let w_reg = &UNWANTED;
                         if w_reg.is_match(&line) {
-                                warn!("Detected malicious request from IPv4: {ip}");
-                                add_ip_to_spammers(ip);
-                                break;
-                            }
+                            warn!("Detected malicious request from IPv4: {ip}");
+                            add_ip_to_spammers(ip);
+                        }
                     }
                     None => {
                         error!("Error: No IP match in line: '{line}'");
