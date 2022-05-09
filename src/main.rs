@@ -86,17 +86,22 @@ fn main() {
         });
     match maybe_log {
         Ok(lines) => {
+            info!("Scanning the access_log…");
             for line in lines {
                 match &IP.captures(&line) {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
                         let w_reg = &WANTED;
                         if w_reg.is_match(&line) {
-                            debug!("Detected normal request: {line} from IPv4: {ip}");
+                            debug!(
+                                "Detected normal request from IPv4: {ip}, by the line: '{line}'"
+                            );
                         } else {
                             let w_reg = &UNWANTED;
                             if w_reg.is_match(&line) {
-                                warn!("Detected malicious request from IPv4: {ip}");
+                                debug!(
+                                    "Detected malicious request from IPv4: {ip}, by the line: '{line}'"
+                                );
                                 add_ip_to_spammers(ip);
                             }
                         }
@@ -106,10 +111,11 @@ fn main() {
                     }
                 }
             }
+            info!("Scan completed.");
             reload_firewall_rules();
         }
         Err(reason) => {
-            error!("Error reading the input file because of the: {reason}")
+            error!("Error reading the access_log file because of the error: {reason}")
         }
     }
 }
