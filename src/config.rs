@@ -1,12 +1,13 @@
 use regex::Regex;
 use ron::ser::{to_string_pretty, PrettyConfig};
 
+use crate::*;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
+    path::Path,
 };
-use tracing::{debug, error};
 
 
 pub const BUFFER_TO_CHECK_IN_BYTES: usize = 65535;
@@ -45,52 +46,53 @@ impl Config {
     }
 
     pub fn load_config_file() -> Config {
-        // for log in ["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"] {
-        //     // if File::from(&log).exists() {
-        //     //     log
-        //     // }
-        // }
-        match File::open("./plog.conf") {
-            Ok(mut read_file) => {
-                let mut buf = String::new();
-                let _ = read_file.read_to_string(&mut buf);
-                match ron::from_str(&buf) {
-                    Ok(obj) => {
-                        debug!("Loaded configuration");
-                        obj
+        for log in ["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"] {
+            if Path::new(log).exists() {
+                info!("Found configuration file: {log}");
+                match File::open(log) {
+                    Ok(mut read_file) => {
+                        let mut buf = String::new();
+                        let _ = read_file.read_to_string(&mut buf);
+                        match ron::from_str(&buf) {
+                            Ok(obj) => {
+                                debug!("Loaded configuration");
+                                return obj;
+                            }
+                            Err(err) => {
+                                error!("Couldn't load configuration: {err}");
+                            }
+                        }
                     }
                     Err(err) => {
-                        error!("Couldn't load configuration: {err}");
-                        Config::default()
-                    }
-                }
-            }
-            Err(err) => {
-                error!(
-                    "Couldn't open configuration file {err}. Creating new default configuration."
-                );
+                        warn!(
+                            "Couldn't open configuration file {err}. Creating new default configuration."
+                        );
 
-                match to_string_pretty(
-                    &Config::default(),
-                    PrettyConfig::new().new_line("\n".to_string()),
-                ) {
-                    Ok(config) => {
-                        debug!("Config: {config}");
-                        let mut file = OpenOptions::new()
-                            .create(true)
-                            .write(true)
-                            .open("./plog.conf")
-                            .expect("The configuration file should be in a writable place!");
-                        file.write_all(format!("{config}\n").as_bytes())
-                            .expect("Couldn't write to configuration file!");
-                    }
-                    Err(err) => {
-                        error!("Couldn't serialize the default configuration file! {err}")
+                        match to_string_pretty(
+                            &Config::default(),
+                            PrettyConfig::new().new_line("\n".to_string()),
+                        ) {
+                            Ok(config) => {
+                                debug!("Config: {config}");
+                                let mut file = OpenOptions::new()
+                                    .create(true)
+                                    .write(true)
+                                    .open(log)
+                                    .expect("The configuration file should be in a writable place!");
+                                file.write_all(format!("{config}\n").as_bytes())
+                                    .expect("Couldn't write to configuration file!");
+                            }
+                            Err(err) => {
+                                error!(
+                                    "Couldn't serialize the default configuration file! {err}"
+                                )
+                            }
+                        }
                     }
                 }
-                Config::default()
             }
         }
+        Config::default()
     }
 
     pub fn access_log() -> String {
