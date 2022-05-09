@@ -15,7 +15,7 @@ use std::{
 
 
 lazy_static! {
-    static ref IP: Regex = Regex::new(r"(?P<ip>(\d+\.\d+\.\d+\.\d+))").unwrap();
+    static ref IP: Regex = Regex::new(r"(?P<ip>(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))").unwrap();
 
     /// WANTED have higher priority over UNWANTED
     static ref WANTED: Regex = Config::wanted();
