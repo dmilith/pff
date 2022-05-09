@@ -144,6 +144,9 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"209.141.33.65 - - [06/Nov/2021:17:50:39 +0100] "GET //verknowsys.wasm HTTP/1.1" 200 220224 "https://verknowsys.com//" "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_0_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36""#,
         r#"116.179.37.171 - - [06/Nov/2021:23:37:59 +0100] "GET /css/style.css HTTP/1.1" 200 2131 "http://dmilith.verknowsys.com/" "Mozilla/5.0 (compatible; Baiduspider-render/2.0; +http://www.baidu.com/search/spider.html)""#,
         r#"188.121.1.62 - - [10/Nov/2021:09:39:45 +0100] "GET /8f02da2b61ae30db9428ab0a8a2cff8e.pdf HTTP/2.0" 200 44103 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36""#,
+        r#"192.168.0.12 - - [09/May/2022:12:16:48 +0200] "POST /api/tsdb/query HTTP/1.1" 200 339921 "http://grafana.home/d/fHosEUY7k/versatile-knowledge-systems-vks4-home?orgId=1&refresh=30s" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:100.0) Gecko/20100101 Firefox/100.0""#,
+        r#"192.168.0.34 - - [09/May/2022:12:15:59 +0200] "GET / HTTP/2.0" 200 685 "-" "Krecik/0.10.11 (+github.com/verknowsys/krecik)""#,
+        r#"127.0.0.1 - - [09/May/2022:12:15:59 +0200] "GET / HTTP/2.0" 200 685 "-" """#,
     ];
     let unwanted = [
         r#"51.75.194.66 - - [08/May/2022:07:36:00 +0200] "GET //mysqladmin/index.php?lang=en HTTP/2.0" 404 548 "http://31.179.184.210/mysqladmin/index.php?lang=en" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"#,

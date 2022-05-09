@@ -31,8 +31,8 @@ impl Default for Config {
         Self {
             spammers_file: "/etc/spammers".to_string(),
             access_log: "/Services/Nginx/logs/access.log.gz".to_string(),
-            buffer: 65535usize,
-            wanted: Regex::new(r"(/robots\.txt|favicon\.ico|\.m[4kop][34av]|sitemap.xml|/.well-known|\.svg|verknowsys|\.wasm|[[:alnum:]]{32}\.p[dn][fg])").unwrap(),
+            buffer: 131070usize,
+            wanted: Regex::new(r"(/robots\.txt|favicon\.ico|\.m[4kop][34av]|sitemap.xml|/.well-known|\.svg|verknowsys|\.wasm|[[:alnum:]]{32}\.p[dn][fg]|192\.168\.\d+|127\.0\.0\.1|10\.0\.0\.d+)").unwrap(),
             unwanted: Regex::new(r"(\.php|XDEBUG|config\.*|login\.|\.DS_Store|mifs|\.axd|wp-*|\.aws|\.[axy]ml|\.[aj]sp*|microsoft|\.env|\\x\d+|\.cgi|cgi-bin|HNAP1|formLogin|owa/auth/x|/dev|/tmp|/var/tmp)").unwrap(),
         }
     }
