@@ -64,7 +64,8 @@ fn decode_file(mut file: File) -> io::Result<Vec<u8>> {
 #[instrument]
 fn main() {
     initialize();
-    let maybe_log = File::open(Config::access_log()).and_then(decode_file);
+    let access_log = Config::access_log();
+    let maybe_log = File::open(&access_log).and_then(decode_file);
     let maybe_log = maybe_log
         .map(|input_data| {
             let input_data_length = input_data.len();
@@ -124,7 +125,7 @@ fn main() {
                 .unwrap_or_default()
         }
         Err(reason) => {
-            error!("Error reading the access_log file because of the error: {reason}")
+            error!("Error reading file: {access_log}, the error is: {reason}")
         }
     }
 }

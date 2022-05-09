@@ -13,7 +13,7 @@ use std::{
 pub const BUFFER_TO_CHECK_IN_BYTES: usize = 65535;
 
 pub const POSSIBLE_CONFIGS: &[&str] =
-    &["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"];
+    &["pff.conf", "/Services/Pff/service.conf", "/etc/pff.conf"];
 
 
 #[derive(Serialize, Deserialize)]
@@ -48,9 +48,10 @@ impl Config {
         Self::load_config_file()
     }
 
-    pub fn load_config_file() -> Config {
-        let log_options = config::POSSIBLE_CONFIGS;
-        let log = log_options
+
+    /// Determine a default log, and an alternative option
+    pub fn find_config() -> Option<String> {
+        let log = config::POSSIBLE_CONFIGS
             .iter()
             .filter_map(|file| {
                 if !Path::new(file).exists() {
@@ -61,47 +62,57 @@ impl Config {
             })
             .take(1)
             .collect::<String>();
+        if log.is_empty() { None } else { Some(log) }
+    }
 
-        if log.is_empty() {
-            let log = log_options[0];
-            warn!("Creating the default configuration in: {log}.");
 
-            match to_string_pretty(
-                &Config::default(),
-                PrettyConfig::new().new_line("\n".to_string()),
-            ) {
-                Ok(config) => {
-                    debug!("Writing the config: {config}");
-                    let mut file = OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .open(&log)
-                        .expect("The configuration file should be in a writable place!");
-                    file.write_all(format!("{config}\n").as_bytes())
-                        .expect("Couldn't write to configuration file!");
-                }
-                Err(err) => {
-                    error!("Couldn't serialize the default configuration file: {log}: {err}")
-                }
-            }
-        } else {
-            debug!("Found configuration file: {log}");
-            match File::open(&log) {
-                Ok(mut read_file) => {
-                    let mut buf = String::new();
-                    let _ = read_file.read_to_string(&mut buf);
-                    match ron::from_str(&buf) {
-                        Ok(obj) => return obj,
-                        Err(err) => {
-                            error!("Failed to parse the configuration file: {log}: {err}");
+    pub fn load_config_file() -> Config {
+        match Config::find_config() {
+            Some(log) => {
+                debug!("Found configuration file: {log}");
+                match File::open(&log) {
+                    Ok(mut read_file) => {
+                        let mut buf = String::new();
+                        let _ = read_file.read_to_string(&mut buf);
+                        match ron::from_str(&buf) {
+                            Ok(obj) => return obj,
+                            Err(err) => {
+                                error!("Failed to parse the configuration file: {log}: {err}");
+                            }
                         }
                     }
-                }
-                Err(err) => {
-                    error!("Couldn't open configuration file: {log}: {err}.");
+                    Err(err) => {
+                        error!("Couldn't open configuration file: {log}: {err}.");
+                    }
                 }
             }
-        }
+
+            None => {
+                let log = config::POSSIBLE_CONFIGS[0]; // fallback to the local dir configuration
+                warn!("Creating the default configuration in: {log}.");
+
+                match to_string_pretty(
+                    &Config::default(),
+                    PrettyConfig::new().new_line("\n".to_string()),
+                ) {
+                    Ok(config) => {
+                        debug!("Writing the config: {config}");
+                        let mut file = OpenOptions::new()
+                            .create(true)
+                            .write(true)
+                            .open(&log)
+                            .expect("The configuration file should be in a writable place!");
+                        file.write_all(format!("{config}\n").as_bytes())
+                            .expect("Couldn't write to configuration file!");
+                    }
+                    Err(err) => {
+                        error!(
+                            "Couldn't serialize the default configuration file: {log}: {err}"
+                        )
+                    }
+                }
+            }
+        };
         Config::default()
     }
 
