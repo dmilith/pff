@@ -1,13 +1,20 @@
 use crate::{config::Config, *};
 use std::{
     fs::{File, OpenOptions},
-    io::{Error, Read, Write},
+    io::{Error, ErrorKind, Read, Write},
     process::{Command, Stdio},
 };
 
 
 #[instrument]
 pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
+    if ips.is_empty() {
+        debug!("No need to reload firewall");
+        return Err(Error::new(
+            ErrorKind::Other,
+            "Empty IP list, no need to reload the firewall",
+        ));
+    }
     let mut read_file = File::open(Config::spammers_file())?;
     let mut buf = String::new();
     read_file.read_to_string(&mut buf)?;
