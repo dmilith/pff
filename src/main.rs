@@ -70,7 +70,7 @@ fn main() {
         .map(|input_data| {
             let input_data_length = input_data.len();
             let buffer = input_data_length - Config::buffer();
-            info!("The uncompressed input file is at position: {buffer}.");
+            debug!("The uncompressed input file is at position: {buffer}.");
             input_data.iter().skip(buffer).cloned().collect::<Vec<u8>>()
         })
         .map(|input_contents| {
