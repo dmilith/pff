@@ -45,7 +45,7 @@ pub fn reload_firewall_rules() {
         .stdin(Stdio::null())
         .output()
     {
-        Ok(_) => info!("pfctl command successful"),
+        Ok(_) => debug!("pfctl command successful"),
         Err(err) => error!("pfctl failed with: {err}"),
     }
 
@@ -56,7 +56,7 @@ pub fn reload_firewall_rules() {
         .stdin(Stdio::null())
         .output()
     {
-        Ok(_) => info!("pfctl command successful"),
+        Ok(_) => debug!("pfctl command successful"),
         Err(err) => error!("pfctl failed with: {err}"),
     }
 }
