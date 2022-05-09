@@ -48,7 +48,7 @@ impl Config {
     pub fn load_config_file() -> Config {
         for log in ["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"] {
             if Path::new(log).exists() {
-                info!("Found configuration file: {log}");
+                debug!("Found configuration file: {log}");
                 match File::open(log) {
                     Ok(mut read_file) => {
                         let mut buf = String::new();
