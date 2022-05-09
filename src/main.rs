@@ -15,7 +15,7 @@ use std::{
 
 
 lazy_static! {
-    static ref IP: Regex = Regex::new(r"(?P<ip>((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d))").unwrap();
+    static ref IP: Regex = Regex::new(r"^(?P<ip>((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d))").unwrap();
 
     /// WANTED have higher priority over UNWANTED
     static ref WANTED: Regex = Config::wanted();
@@ -160,6 +160,9 @@ fn test_regex_patterns() {
         println!("The IP: {the_ip}");
         assert!(r.is_match(the_ip));
     }
+    assert!(!r.is_match("DUPA 188.147.102.254 - -"));
+    assert!(!r.is_match("   188.147.102.254 - -"));
+    assert!(!r.is_match("1.2..188.147.102.254 - -"));
 }
 
 
