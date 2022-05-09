@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::*;
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::Error;
 use std::io::Read;
 use std::io::Write;
 use std::process::Command;
@@ -9,27 +10,31 @@ use std::process::Stdio;
 
 
 #[instrument]
-pub fn add_ip_to_spammers(ip: &str) {
-    let mut read_file = File::open(Config::spammers_file())
-        .expect("The spammers file should exists with newline separated IPs.");
+pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
+    let mut read_file = File::open(Config::spammers_file())?;
     let mut buf = String::new();
-    read_file
-        .read_to_string(&mut buf)
-        .expect("The spammers file has to be readable.");
-    if buf.contains(ip) {
-        debug!("The IP: '{ip}' is already present in the spammers file.");
-    } else {
-        drop(read_file);
-        drop(buf);
+    read_file.read_to_string(&mut buf)?;
+    drop(read_file);
 
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(Config::spammers_file())
-            .expect("The spammers file should exists with newline separated IPs");
-        file.write_all(format!("{ip}\n").as_bytes())
-            .expect("Couldn't write to spammers file!");
-    }
+    let list_of_ips: String = ips
+        .iter()
+        .filter_map(|ip| {
+            if buf.contains(ip) {
+                None
+            } else {
+                let formatted = format!("{ip}\n");
+                buf += &formatted; // add the ip to the buf to deduplicate entries
+                Some(formatted)
+            }
+        })
+        .collect();
+    drop(buf);
+
+    OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(Config::spammers_file())
+        .and_then(|mut file| file.write_all(list_of_ips.as_bytes()))
 }
 
 

@@ -87,6 +87,7 @@ fn main() {
     match maybe_log {
         Ok(lines) => {
             info!("Scanning the access_log…");
+            let mut ips: Vec<String> = vec![];
             for line in lines {
                 match &IP.captures(&line) {
                     Some(ip_match) => {
@@ -98,11 +99,15 @@ fn main() {
                             );
                         } else {
                             let w_reg = &UNWANTED;
-                            if w_reg.is_match(&line) {
+                            if w_reg.is_match(&line) && !ips.contains(&ip.to_string()) {
                                 debug!(
-                                    "Detected malicious request from IPv4: {ip}, by the line: '{line}'"
+                                    "Detected previously unseen malicious request from IPv4: {ip}, by the line: '{line}'"
                                 );
-                                add_ip_to_spammers(ip);
+                                ips.push(ip.to_string());
+                            } else {
+                                debug!(
+                                    "Detected malicious request from IPv4: {ip} that's already known, skipping it."
+                                )
                             }
                         }
                     }
@@ -112,7 +117,10 @@ fn main() {
                 }
             }
             info!("Scan completed.");
-            reload_firewall_rules();
+
+            add_ip_to_spammers(&ips)
+                .map(|_| reload_firewall_rules())
+                .unwrap_or_default()
         }
         Err(reason) => {
             error!("Error reading the access_log file because of the error: {reason}")

@@ -64,8 +64,8 @@ impl Config {
             warn!("Creating the default configuration in: {log}.");
 
             match to_string_pretty(
-                            &Config::default(),
-                            PrettyConfig::new().new_line("\n".to_string()),
+                &Config::default(),
+                PrettyConfig::new().new_line("\n".to_string()),
             ) {
                 Ok(config) => {
                     debug!("Writing the config: {config}");
