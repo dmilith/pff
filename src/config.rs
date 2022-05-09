@@ -49,9 +49,9 @@ impl Config {
     }
 
 
-    /// Determine a default log, and an alternative option
+    /// Determine a default config file
     pub fn find_config() -> Option<String> {
-        let log = config::POSSIBLE_CONFIGS
+        let config = config::POSSIBLE_CONFIGS
             .iter()
             .filter_map(|file| {
                 if !Path::new(file).exists() {
@@ -62,7 +62,11 @@ impl Config {
             })
             .take(1)
             .collect::<String>();
-        if log.is_empty() { None } else { Some(log) }
+        if config.is_empty() {
+            None
+        } else {
+            Some(config)
+        }
     }
 
 

