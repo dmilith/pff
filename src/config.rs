@@ -1,13 +1,12 @@
 use regex::Regex;
-use ron;
-pub use serde::{Deserialize, Serialize};
+use ron::ser::{to_string_pretty, PrettyConfig};
+
+use serde::{Deserialize, Serialize};
 use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
 };
 use tracing::{debug, error};
-
-// pub use serde_derive::{Deserialize, Serialize};
 
 
 pub const BUFFER_TO_CHECK_IN_BYTES: usize = 65535;
@@ -71,7 +70,10 @@ impl Config {
                     "Couldn't open configuration file {err}. Creating new default configuration."
                 );
 
-                match ron::to_string(&Config::default()) {
+                match to_string_pretty(
+                    &Config::default(),
+                    PrettyConfig::new().new_line("\n".to_string()),
+                ) {
                     Ok(config) => {
                         debug!("Config: {config}");
                         let mut file = OpenOptions::new()

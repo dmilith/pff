@@ -93,15 +93,16 @@ fn main() {
                         let w_reg = &WANTED;
                         if w_reg.is_match(&line) {
                             debug!("Detected normal request: {line} from IPv4: {ip}");
-                        }
-                        let w_reg = &UNWANTED;
-                        if w_reg.is_match(&line) {
-                            warn!("Detected malicious request from IPv4: {ip}");
-                            add_ip_to_spammers(ip);
+                        } else {
+                            let w_reg = &UNWANTED;
+                            if w_reg.is_match(&line) {
+                                warn!("Detected malicious request from IPv4: {ip}");
+                                add_ip_to_spammers(ip);
+                            }
                         }
                     }
                     None => {
-                        error!("Error: No IP match in line: '{line}'");
+                        error!("Error: No IPv4 match in line: '{line}'");
                     }
                 }
             }

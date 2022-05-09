@@ -156,7 +156,6 @@ dependencies = [
  "regex",
  "ron",
  "serde",
- "serde_derive",
  "serde_regex",
  "tracing",
  "tracing-subscriber",
