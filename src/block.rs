@@ -1,12 +1,9 @@
-use crate::config::Config;
-use crate::*;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::Error;
-use std::io::Read;
-use std::io::Write;
-use std::process::Command;
-use std::process::Stdio;
+use crate::{config::Config, *};
+use std::{
+    fs::{File, OpenOptions},
+    io::{Error, Read, Write},
+    process::{Command, Stdio},
+};
 
 
 #[instrument]
