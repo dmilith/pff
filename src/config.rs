@@ -12,6 +12,9 @@ use std::{
 
 pub const BUFFER_TO_CHECK_IN_BYTES: usize = 65535;
 
+pub const POSSIBLE_CONFIGS: &[&str] =
+    &["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"];
+
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -46,9 +49,9 @@ impl Config {
     }
 
     pub fn load_config_file() -> Config {
-        let log_options = ["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"];
+        let log_options = config::POSSIBLE_CONFIGS;
         let log = log_options
-            .into_iter()
+            .iter()
             .filter_map(|file| {
                 if !Path::new(file).exists() {
                     None
