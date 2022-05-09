@@ -46,49 +46,56 @@ impl Config {
     }
 
     pub fn load_config_file() -> Config {
-        for log in ["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"] {
-            if Path::new(log).exists() {
-                debug!("Found configuration file: {log}");
-                match File::open(log) {
-                    Ok(mut read_file) => {
-                        let mut buf = String::new();
-                        let _ = read_file.read_to_string(&mut buf);
-                        match ron::from_str(&buf) {
-                            Ok(obj) => {
-                                debug!("Loaded configuration");
-                                return obj;
-                            }
-                            Err(err) => {
-                                error!("Couldn't load configuration: {err}");
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        warn!(
-                            "Couldn't open configuration file {err}. Creating new default configuration."
-                        );
+        let log_options = ["plog.conf", "/Services/Plog/service.conf", "/etc/plog.conf"];
+        let log = log_options
+            .into_iter()
+            .filter_map(|file| {
+                if !Path::new(file).exists() {
+                    None
+                } else {
+                    Some(file.to_string())
+                }
+            })
+            .take(1)
+            .collect::<String>();
 
-                        match to_string_pretty(
+        if log.is_empty() {
+            let log = log_options[0];
+            warn!("Creating the default configuration in: {log}.");
+
+            match to_string_pretty(
                             &Config::default(),
                             PrettyConfig::new().new_line("\n".to_string()),
-                        ) {
-                            Ok(config) => {
-                                debug!("Config: {config}");
-                                let mut file = OpenOptions::new()
-                                    .create(true)
-                                    .write(true)
-                                    .open(log)
-                                    .expect("The configuration file should be in a writable place!");
-                                file.write_all(format!("{config}\n").as_bytes())
-                                    .expect("Couldn't write to configuration file!");
-                            }
-                            Err(err) => {
-                                error!(
-                                    "Couldn't serialize the default configuration file! {err}"
-                                )
-                            }
+            ) {
+                Ok(config) => {
+                    debug!("Writing the config: {config}");
+                    let mut file = OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .open(&log)
+                        .expect("The configuration file should be in a writable place!");
+                    file.write_all(format!("{config}\n").as_bytes())
+                        .expect("Couldn't write to configuration file!");
+                }
+                Err(err) => {
+                    error!("Couldn't serialize the default configuration file: {log}: {err}")
+                }
+            }
+        } else {
+            debug!("Found configuration file: {log}");
+            match File::open(&log) {
+                Ok(mut read_file) => {
+                    let mut buf = String::new();
+                    let _ = read_file.read_to_string(&mut buf);
+                    match ron::from_str(&buf) {
+                        Ok(obj) => return obj,
+                        Err(err) => {
+                            error!("Failed to parse the configuration file: {log}: {err}");
                         }
                     }
+                }
+                Err(err) => {
+                    error!("Couldn't open configuration file: {log}: {err}.");
                 }
             }
         }
