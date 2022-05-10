@@ -34,11 +34,19 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
         .collect();
     drop(buf);
 
-    OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(Config::spammers_file())
-        .and_then(|mut file| file.write_all(list_of_ips.as_bytes()))
+    if list_of_ips.is_empty() {
+        debug!("No need to reload firewall");
+        Err(Error::new(
+            ErrorKind::Other,
+            "List of IPs is empty, no need to reload the firewall",
+        ))
+    } else {
+        OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(Config::spammers_file())
+            .and_then(|mut file| file.write_all(list_of_ips.as_bytes()))
+    }
 }
 
 
