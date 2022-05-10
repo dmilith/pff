@@ -95,28 +95,25 @@ fn main() {
                 match &IP.captures(&line) {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
-                        trace!("Checking IP: {ip}");
-                        let w_reg = &WANTED;
-                        if w_reg.is_match(&line) {
+                        if !WANTED.is_match(&line) && !UNWANTED.is_match(&line) {
+                            debug!("No match for the line: '{line}', skipping it.");
+                        } else if WANTED.is_match(&line) {
                             debug!(
                                 "Detected normal request from IPv4: {ip}, by the line: '{line}'"
                             );
-                        } else {
-                            let w_reg = &UNWANTED;
-                            if w_reg.is_match(&line) && !ips.contains(&ip.to_string()) {
-                                debug!(
-                                    "Detected previously unseen malicious request from IPv4: {ip}, by the line: '{line}'"
-                                );
+                        } else if UNWANTED.is_match(&line) && !ips.contains(&ip.to_string()) {
+                            debug!(
+                                "Detected previously unseen malicious request from IPv4: {ip}, by the line: '{line}'"
+                            );
                                 ips.push(ip.to_string());
                             } else {
                                 debug!(
                                     "Detected malicious request from IPv4: {ip} that's already known, skipping it."
                                 )
                             }
-                        }
                     }
                     None => {
-                        error!("Error: No IPv4 match in line: '{line}'");
+                        warn!("No IPv4 match in line: '{line}'. Skipping it");
                     }
                 }
             }
