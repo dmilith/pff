@@ -10,7 +10,7 @@ use std::{
 };
 
 
-pub const BUFFER_TO_CHECK_IN_BYTES: usize = 4 * 1024 * 1024; // check last 4 MiBs of the log at once
+pub const BUFFER_TO_CHECK_IN_BYTES: usize = 16 * 1024 * 1024; // check last 16 MiBs of the log at once
 
 pub const POSSIBLE_CONFIGS: &[&str] =
     &["pff.conf", "/Services/Pff/service.conf", "/etc/pff.conf"];
