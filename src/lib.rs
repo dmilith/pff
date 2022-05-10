@@ -5,4 +5,4 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 pub mod block;
 pub mod config;
 
-pub use tracing::{debug, error, info, instrument, warn};
+pub use tracing::{debug, error, info, instrument, trace, warn};

@@ -1,7 +1,6 @@
 use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
-use flate2::bufread::GzDecoder;
 use lazy_static::lazy_static;
 use pff::{
     block::{add_ip_to_spammers, reload_firewall_rules},
@@ -44,17 +43,13 @@ fn initialize() {
 
 /// Uncompress the input file using simple GzEncoder
 #[instrument]
-fn decode_file(mut file: File) -> io::Result<Vec<u8>> {
+fn read_file_bytes(mut file: File) -> io::Result<Vec<u8>> {
     let mut buf = vec![];
     match file.read_to_end(&mut buf) {
         Ok(bytes_read) => {
-            info!("Input file read bytes: {bytes_read}");
-            let mut gzipper = GzDecoder::new(&*buf);
-            let mut output_buf = vec![];
-            gzipper.read_to_end(&mut output_buf)?;
-            drop(gzipper);
-            drop(buf);
-            Ok(output_buf)
+            debug!("Input file read bytes: {bytes_read}");
+
+            Ok(buf)
         }
         Err(err) => Err(err),
     }
@@ -65,7 +60,7 @@ fn decode_file(mut file: File) -> io::Result<Vec<u8>> {
 fn main() {
     initialize();
     let access_log = Config::access_log();
-    let decoded_log = File::open(&access_log).and_then(decode_file);
+    let decoded_log = File::open(&access_log).and_then(read_file_bytes);
     let maybe_log = decoded_log
         .map(|input_data| {
             let input_data_length = input_data.len();
