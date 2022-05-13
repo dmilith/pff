@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2021"
 description = "pf filter - parse Nginx access.log for unwanted regexp patterns, and block them on the PF firewall"
 repository = "https://github.com/dmilith/pff"
-license = "BSD"
+license = "MIT"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
