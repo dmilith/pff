@@ -1,11 +1,15 @@
 use crate::{config::Config, *};
+
+use rayon::prelude::*;
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::{Error, ErrorKind, Read, Write},
     process::{Command, Stdio},
+    sync::{Arc, Mutex},
 };
 
 
+/// Add IPv4 to spammers file
 #[instrument]
 pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
     if ips.is_empty() {
@@ -15,19 +19,22 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
             "Empty IP list, no need to reload the firewall",
         ));
     }
-    let mut read_file = File::open(Config::spammers_file())?;
-    let mut buf = String::new();
-    read_file.read_to_string(&mut buf)?;
-    drop(read_file);
+    let buf = Arc::new(Mutex::new(String::from("")));
+    let mut buf_locked = buf.lock().unwrap();
+    OpenOptions::new()
+        .open(Config::spammers_file())?
+        .read_to_string(&mut buf_locked)?;
+    drop(buf_locked);
 
     let list_of_ips: String = ips
-        .iter()
+        .par_iter()
         .filter_map(|ip| {
-            if buf.contains(ip) {
+            let mut buffer = buf.lock().unwrap();
+            if buffer.contains(ip) {
                 None
             } else {
                 let formatted = format!("{ip}\n");
-                buf += &formatted; // add the ip to the buf to deduplicate entries
+                *buffer += &formatted;
                 Some(formatted)
             }
         })

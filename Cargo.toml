@@ -12,6 +12,7 @@ license = "MIT"
 [dependencies]
 lazy_static = "1.4.0"
 mimalloc = "0.1.29"
+rayon = "1.5.3"
 regex = "1.5.5"
 ron = "0.7.0"
 serde = { version = "1.0.137", features = ["derive"] }

@@ -56,8 +56,14 @@ fn read_file_bytes(mut file: File) -> io::Result<Vec<u8>> {
 #[instrument]
 fn main() {
     initialize();
+    info!(
+        "Starting {} v{}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION")
+    );
     let access_log = Config::access_log();
     let decoded_log = File::open(&access_log).and_then(read_file_bytes);
+    info!("Loading the log: {access_log}");
     let maybe_log = decoded_log
         .map(|input_data| {
             let input_data_length = input_data.len();
