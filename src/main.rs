@@ -172,6 +172,7 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"192.168.0.12 - - [09/May/2022:12:16:48 +0200] "POST /api/tsdb/query HTTP/1.1" 200 339921 "http://grafana.home/d/fHosEUY7k/versatile-knowledge-systems-vks4-home?orgId=1&refresh=30s" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:100.0) Gecko/20100101 Firefox/100.0""#,
         r#"192.168.0.34 - - [09/May/2022:12:15:59 +0200] "GET / HTTP/2.0" 200 685 "-" "Krecik/0.10.11 (+github.com/verknowsys/krecik)""#,
         r#"127.0.0.1 - - [09/May/2022:12:15:59 +0200] "GET / HTTP/2.0" 200 685 "-" """#,
+        r#"55.217.51.221 - - [16/May/2022:14:11:50 +0200] "GET /binary/Common/Fontconfig-2.13.96-FreeBSD.zfsp HTTP/2.0" 200 43739 "-" "curl/7.78.0""#,
     ];
     let unwanted = [
         r#"51.75.194.66 - - [08/May/2022:07:36:00 +0200] "GET //mysqladmin/index.php?lang=en HTTP/2.0" 404 548 "http://31.179.184.210/mysqladmin/index.php?lang=en" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"#,
