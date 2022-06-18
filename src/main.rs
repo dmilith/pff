@@ -93,34 +93,38 @@ fn main() {
     match maybe_log {
         Ok(lines) => {
             info!("Scanning the access_log…");
-            let mut ips: Vec<String> = vec![];
-            for line in lines {
+            let ips = lines.par_iter().filter_map(|line| {
                 trace!("Processling line: '{line}'");
-                match &IP.captures(&line) {
+                match &IP.captures(line) {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
-                        if !WANTED.is_match(&line) && !UNWANTED.is_match(&line) {
+                        let ip_str = ip.to_string();
+                        if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
                             debug!("No match for the line: '{line}', skipping it.");
-                        } else if WANTED.is_match(&line) {
+                            None
+                        } else if WANTED.is_match(line) {
                             debug!(
-                                "Detected normal request from IPv4: {ip}, by the line: '{line}'"
+                                "Detected normal request from IPv4: {ip_str}, by the line: '{line}'"
                             );
-                        } else if UNWANTED.is_match(&line) && !ips.contains(&ip.to_string()) {
+                            None
+                        } else if UNWANTED.is_match(line) && !lines.contains(&ip_str) {
                             debug!(
-                                "Detected previously unseen malicious request from IPv4: {ip}, by the line: '{line}'"
+                                "Detected previously unseen malicious request from IPv4: {ip_str}, by the line: '{line}'"
                             );
-                            ips.push(ip.to_string());
+                            Some(ip_str)
                         } else {
                             debug!(
-                                "Detected malicious request from IPv4: {ip} that's already known, skipping it."
-                            )
+                                "Detected malicious request from IPv4: {ip_str} that's already known, skipping it."
+                            );
+                            None
                         }
                     }
                     None => {
                         warn!("No IPv4 match in line: '{line}'. Skipping it");
+                        None
                     }
                 }
-            }
+            }).collect();
             info!("Scan completed.");
 
             add_ip_to_spammers(&ips)
