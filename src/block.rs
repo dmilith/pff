@@ -59,7 +59,7 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
 
 /// runs command to reload firewall rules
 #[instrument]
-pub fn reload_firewall_rules() {
+pub fn reload_firewall_rules() -> Result<(), Error> {
     info!("Reloading firewall rules");
     #[cfg(target_os = "macos")]
     match Command::new("sudo")
@@ -67,10 +67,15 @@ pub fn reload_firewall_rules() {
         .stdin(Stdio::null())
         .output()
     {
-        Ok(_) => debug!("pfctl command successful"),
-        Err(err) => error!("pfctl failed with: {err}"),
+        Ok(_) => {
+            debug!("pfctl command successful");
+            Ok(())
+        }
+        Err(err) => {
+            error!("pfctl failed with: {err}");
+            Err(err)
+        }
     }
-
 
     #[cfg(target_os = "freebsd")]
     match Command::new("pfctl")
@@ -78,7 +83,13 @@ pub fn reload_firewall_rules() {
         .stdin(Stdio::null())
         .output()
     {
-        Ok(_) => debug!("pfctl command successful"),
-        Err(err) => error!("pfctl failed with: {err}"),
+        Ok(_) => {
+            debug!("pfctl command successful");
+            Ok(())
+        }
+        Err(err) => {
+            error!("pfctl failed with: {err}");
+            Err(err)
+        }
     }
 }

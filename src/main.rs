@@ -128,8 +128,10 @@ fn main() {
             info!("Scan completed.");
 
             add_ip_to_spammers(&ips)
-                .map(|_| reload_firewall_rules())
-                .unwrap_or_default()
+                .and(reload_firewall_rules())
+                .unwrap_or_else(|_| debug!("No firewall rules reloaded"));
+
+            info!("Spammers processing is now complete.");
         }
         Err(reason) => {
             error!("Error reading file: {access_log}, the error is: {reason}")
