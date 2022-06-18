@@ -135,8 +135,8 @@ fn main() {
             add_ip_to_spammers(&ips)
                 .and_then(|_| reload_firewall_rules())
                 .map_err(|err| {
-                    debug!("Error: {err}");
                     info!("Firewall reload skipped.");
+                    debug!("Skipped because: {err}");
                 })
                 .unwrap_or_default();
 

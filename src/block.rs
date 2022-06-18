@@ -22,6 +22,7 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
     let buf = Arc::new(Mutex::new(String::from("")));
     let mut buf_locked = buf.lock().unwrap();
     OpenOptions::new()
+        .read(true)
         .open(Config::spammers_file())?
         .read_to_string(&mut buf_locked)?;
     drop(buf_locked);
