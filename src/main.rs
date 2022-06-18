@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -74,7 +75,7 @@ fn main() {
             } else {
                 let buffer = input_data_length - Config::buffer();
                 debug!("The uncompressed input file is now at position: {buffer}.");
-                input_data.iter().skip(buffer).cloned().collect::<Vec<u8>>()
+                input_data.into_par_iter().skip(buffer).collect()
             }
         })
         .map(|input_contents| {
