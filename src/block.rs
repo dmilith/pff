@@ -52,7 +52,10 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
             .write(true)
             .append(true)
             .open(Config::spammers_file())
-            .and_then(|mut file| file.write_all(list_of_ips.as_bytes()))
+            .and_then(|mut file| {
+                debug!("Written to file: {file:?} list_of_ips: {list_of_ips:?}");
+                file.write_all(list_of_ips.as_bytes())
+            })
     }
 }
 
@@ -67,8 +70,8 @@ pub fn reload_firewall_rules() -> Result<(), Error> {
         .stdin(Stdio::null())
         .output()
     {
-        Ok(_) => {
-            debug!("pfctl command successful");
+        Ok(out) => {
+            debug!("pfctl command successful. The output: {out:?}");
             Ok(())
         }
         Err(err) => {
@@ -83,8 +86,8 @@ pub fn reload_firewall_rules() -> Result<(), Error> {
         .stdin(Stdio::null())
         .output()
     {
-        Ok(_) => {
-            debug!("pfctl command successful");
+        Ok(out) => {
+            debug!("pfctl command successful. The output: {out:?}");
             Ok(())
         }
         Err(err) => {

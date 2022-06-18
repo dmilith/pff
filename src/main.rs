@@ -11,6 +11,7 @@ use pff::{
 use std::{
     fs::File,
     io::{self, prelude::*},
+    sync::{Arc, Mutex},
 };
 
 
@@ -93,12 +94,15 @@ fn main() {
     match maybe_log {
         Ok(lines) => {
             info!("Scanning the access_log…");
+
+            let new_seen = Arc::new(Mutex::new(Vec::new()));
             let ips = lines.par_iter().filter_map(|line| {
                 trace!("Processling line: '{line}'");
                 match &IP.captures(line) {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
                         let ip_str = ip.to_string();
+                        let mut seen_lock = new_seen.lock().unwrap();
                         if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
                             debug!("No match for the line: '{line}', skipping it.");
                             None
@@ -107,10 +111,11 @@ fn main() {
                                 "Detected normal request from IPv4: {ip_str}, by the line: '{line}'"
                             );
                             None
-                        } else if UNWANTED.is_match(line) && !lines.contains(&ip_str) {
+                        } else if UNWANTED.is_match(line) && !seen_lock.contains(&ip_str) {
                             debug!(
                                 "Detected previously unseen malicious request from IPv4: {ip_str}, by the line: '{line}'"
                             );
+                            seen_lock.push(ip_str.clone());
                             Some(ip_str)
                         } else {
                             debug!(
@@ -128,8 +133,12 @@ fn main() {
             info!("Scan completed.");
 
             add_ip_to_spammers(&ips)
-                .and(reload_firewall_rules())
-                .unwrap_or_else(|_| debug!("No firewall rules reloaded"));
+                .and_then(|_| reload_firewall_rules())
+                .map_err(|err| {
+                    debug!("Error: {err}");
+                    info!("Firewall reload skipped.");
+                })
+                .unwrap_or_default();
 
             info!("Spammers processing is now complete.");
         }
