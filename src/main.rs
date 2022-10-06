@@ -102,26 +102,33 @@ fn main() {
                     Some(ip_match) => {
                         let ip = &ip_match[0];
                         let ip_str = ip.to_string();
-                        let mut seen_lock = new_seen.lock().unwrap();
-                        if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
-                            debug!("No match for the line: '{line}', skipping it.");
-                            None
-                        } else if WANTED.is_match(line) {
-                            debug!(
-                                "Detected normal request from IPv4: {ip_str}, by the line: '{line}'"
-                            );
-                            None
-                        } else if UNWANTED.is_match(line) && !seen_lock.contains(&ip_str) {
-                            debug!(
-                                "Detected previously unseen malicious request from IPv4: {ip_str}, by the line: '{line}'"
-                            );
-                            seen_lock.push(ip_str.clone());
-                            Some(ip_str)
-                        } else {
-                            debug!(
-                                "Detected malicious request from IPv4: {ip_str} that's already known, skipping it."
-                            );
-                            None
+                        match new_seen.lock() {
+                            Ok(mut seen_lock) => {
+                                if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
+                                    debug!("No match for the line: '{line}', skipping it.");
+                                    None
+                                } else if WANTED.is_match(line) {
+                                    debug!(
+                                        "Detected normal request from IPv4: {ip_str}, by the line: '{line}'"
+                                    );
+                                    None
+                                } else if UNWANTED.is_match(line) && !seen_lock.contains(&ip_str) {
+                                    debug!(
+                                        "Detected previously unseen malicious request from IPv4: {ip_str}, by the line: '{line}'"
+                                    );
+                                    seen_lock.push(ip_str.clone());
+                                    Some(ip_str)
+                                } else {
+                                    debug!(
+                                        "Detected malicious request from IPv4: {ip_str} that's already known, skipping it."
+                                    );
+                                    None
+                                }
+                            }
+                            Err(e) => {
+                                error!("Error: {e}");
+                                None
+                            }
                         }
                     }
                     None => {

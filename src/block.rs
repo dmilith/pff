@@ -20,23 +20,30 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
         ));
     }
     let buf = Arc::new(Mutex::new(String::from("")));
-    let mut buf_locked = buf.lock().unwrap();
-    OpenOptions::new()
-        .read(true)
-        .open(Config::spammers_file())?
-        .read_to_string(&mut buf_locked)?;
-    drop(buf_locked);
+    if let Ok(mut inner_buf) = buf.lock() {
+        OpenOptions::new()
+            .read(true)
+            .open(Config::spammers_file())?
+            .read_to_string(&mut inner_buf)?;
+    }
 
     let list_of_ips: String = ips
         .par_iter()
         .filter_map(|ip| {
-            let mut buffer = buf.lock().unwrap();
-            if buffer.contains(ip) {
-                None
-            } else {
-                let formatted = format!("{ip}\n");
-                *buffer += &formatted;
-                Some(formatted)
+            match buf.lock() {
+                Ok(mut buffer) => {
+                    if buffer.contains(ip) {
+                        None
+                    } else {
+                        let formatted = format!("{ip}\n");
+                        *buffer += &formatted;
+                        Some(formatted)
+                    }
+                }
+                Err(e) => {
+                    error!("Error: {e}");
+                    None
+                }
             }
         })
         .collect();
