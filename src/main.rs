@@ -9,6 +9,7 @@ use pff::{
     IP, UNWANTED, WANTED,
 };
 use std::{
+    collections::HashMap,
     fs::File,
     io::{self, prelude::*},
     sync::{Arc, Mutex},
@@ -95,48 +96,55 @@ fn main() {
         Ok(lines) => {
             info!("Scanning the access_log…");
 
-            let new_seen = Arc::new(Mutex::new(Vec::new()));
-            let ips = lines.par_iter().filter_map(|line| {
-                trace!("Processling line: '{line}'");
-                match &IP.captures(line) {
-                    Some(ip_match) => {
-                        let ip = &ip_match[0];
-                        let ip_str = ip.to_string();
-                        match new_seen.lock() {
-                            Ok(mut seen_lock) => {
-                                if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
-                                    debug!("No match for the line: '{line}', skipping it.");
-                                    None
-                                } else if WANTED.is_match(line) {
-                                    debug!(
-                                        "Detected normal request from IPv4: {ip_str}, by the line: '{line}'"
-                                    );
-                                    None
-                                } else if UNWANTED.is_match(line) && !seen_lock.contains(&ip_str) {
-                                    info!(
-                                        "Detected previously unseen malicious request from IPv4: {ip_str}, by the line: '{line}'"
-                                    );
-                                    seen_lock.push(ip_str.clone());
-                                    Some(ip_str)
-                                } else {
-                                    debug!(
-                                        "Detected malicious request from IPv4: {ip_str} that's already known, skipping it."
-                                    );
+            // format: [key: IPv4, value: line]
+            let new_seen = Arc::new(Mutex::new(HashMap::new()));
+            let ips = lines
+                .par_iter()
+                .filter_map(|line| {
+                    trace!("Processling line: '{line}'");
+                    match &IP.captures(line) {
+                        Some(ip_match) => {
+                            let ip = &ip_match[0];
+                            let ip_str = ip.to_string();
+                            match new_seen.lock() {
+                                Ok(mut seen_lock) => {
+                                    if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
+                                        None
+                                    } else if UNWANTED.is_match(line)
+                                        && !seen_lock.contains_key(&ip_str)
+                                    {
+                                        seen_lock.insert(ip_str.to_owned(), line);
+                                        Some(ip_str)
+                                    } else {
+                                        None
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Error: {e}");
                                     None
                                 }
                             }
-                            Err(e) => {
-                                error!("Error: {e}");
-                                None
-                            }
+                        }
+                        None => {
+                            warn!("No IPv4 match in line: '{line}'. Skipping it");
+                            None
                         }
                     }
-                    None => {
-                        warn!("No IPv4 match in line: '{line}'. Skipping it");
-                        None
-                    }
+                })
+                .collect();
+            info!("New entries:");
+            match new_seen.lock() {
+                Ok(seen_lock) => {
+                    let block_list: String = seen_lock
+                        .iter()
+                        .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
+                        .collect();
+                    info!("{block_list}");
                 }
-            }).collect();
+                Err(e) => {
+                    error!("Fail: {e}");
+                }
+            }
             info!("Scan completed.");
 
             add_ip_to_spammers(&ips)
