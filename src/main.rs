@@ -113,7 +113,7 @@ fn main() {
                                     );
                                     None
                                 } else if UNWANTED.is_match(line) && !seen_lock.contains(&ip_str) {
-                                    debug!(
+                                    info!(
                                         "Detected previously unseen malicious request from IPv4: {ip_str}, by the line: '{line}'"
                                     );
                                     seen_lock.push(ip_str.clone());
