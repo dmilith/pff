@@ -138,7 +138,7 @@ fn main() {
                 Ok(seen_lock) => {
                     let block_list: String = seen_lock
                         .iter()
-                        .filter(|(ip_key, _)| !all_current_spammers.contains(*ip_key))
+                        .filter(|(ip_key, _)| all_current_spammers.contains(*ip_key))
                         .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
                         .collect();
                     if !block_list.is_empty() {
