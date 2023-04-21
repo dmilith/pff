@@ -104,7 +104,7 @@ impl Config {
                         let mut file = OpenOptions::new()
                             .create(true)
                             .write(true)
-                            .open(&log)
+                            .open(log)
                             .expect("The configuration file should be in a writable place!");
                         file.write_all(format!("{config}\n").as_bytes())
                             .expect("Couldn't write to configuration file!");

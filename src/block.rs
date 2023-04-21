@@ -74,7 +74,7 @@ pub fn reload_firewall_rules() -> Result<(), Error> {
     info!("Reloading firewall rules");
     #[cfg(target_os = "macos")]
     match Command::new("sudo")
-        .args(&["pfctl", "-v", "-Tl", "-f", "/etc/pf.conf"])
+        .args(["pfctl", "-v", "-Tl", "-f", "/etc/pf.conf"])
         .stdin(Stdio::null())
         .output()
     {
