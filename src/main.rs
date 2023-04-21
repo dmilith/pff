@@ -66,7 +66,7 @@ fn main() {
     );
     let access_log = Config::access_log();
     let decoded_log = File::open(&access_log).and_then(read_file_bytes);
-    info!("Loading the log: {access_log}");
+    info!("Loading log: {access_log}");
     let maybe_log = decoded_log
         .map(|input_data| {
             let input_data_length = input_data.len();
@@ -94,8 +94,6 @@ fn main() {
         });
     match maybe_log {
         Ok(lines) => {
-            info!("Scanning the access_log…");
-
             // format: [key: IPv4, value: line]
             let new_seen = Arc::new(Mutex::new(HashMap::new()));
             let ips = lines
@@ -132,6 +130,7 @@ fn main() {
                     }
                 })
                 .collect();
+            info!("Scan completed.");
 
             let all_current_spammers = all_current_spammers(&ips).unwrap_or_default();
             match new_seen.lock() {
@@ -142,14 +141,13 @@ fn main() {
                         .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
                         .collect();
                     if !block_list.is_empty() {
-                        info!("New blocks:\n{block_list}\n");
+                        info!("New blocks:\n\n{block_list}");
                     }
                 }
                 Err(e) => {
                     error!("Fail: {e}");
                 }
             }
-            info!("Scan completed.");
             add_ip_to_spammers(&ips, &all_current_spammers)
                 .and_then(|_| reload_firewall_rules())
                 .map_err(|err| {
