@@ -9,16 +9,9 @@ use std::{
 };
 
 
-/// Add IPv4 to spammers file
+/// List Ipv4 from spammers file
 #[instrument]
-pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
-    if ips.is_empty() {
-        debug!("No need to reload firewall");
-        return Err(Error::new(
-            ErrorKind::Other,
-            "Empty IP list, no need to reload the firewall",
-        ));
-    }
+pub fn all_current_spammers(ips: &Vec<String>) -> Result<String, Error> {
     let buf = Arc::new(Mutex::new(String::from("")));
     if let Ok(mut inner_buf) = buf.lock() {
         OpenOptions::new()
@@ -47,9 +40,22 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
             }
         })
         .collect();
-    drop(buf);
+    Ok(list_of_ips)
+}
 
-    if list_of_ips.is_empty() {
+
+/// Add IPv4 to spammers file
+#[instrument]
+pub fn add_ip_to_spammers(ips: &Vec<String>, all_spammers: &String) -> Result<(), Error> {
+    if ips.is_empty() {
+        debug!("No need to reload firewall");
+        return Err(Error::new(
+            ErrorKind::Other,
+            "Empty IP list, no need to reload the firewall",
+        ));
+    }
+
+    if all_spammers.is_empty() {
         debug!("No need to reload firewall");
         Err(Error::new(
             ErrorKind::Other,
@@ -61,8 +67,8 @@ pub fn add_ip_to_spammers(ips: &Vec<String>) -> Result<(), Error> {
             .append(true)
             .open(Config::spammers_file())
             .and_then(|mut file| {
-                debug!("Written to file: {file:?} list_of_ips: {list_of_ips:?}");
-                file.write_all(list_of_ips.as_bytes())
+                debug!("Written to file: {file:?} all_spammers: {all_spammers:?}");
+                file.write_all(all_spammers.as_bytes())
             })
     }
 }

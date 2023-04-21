@@ -4,7 +4,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 
 use pff::{
-    block::{add_ip_to_spammers, reload_firewall_rules},
+    block::{add_ip_to_spammers, all_current_spammers, reload_firewall_rules},
     config::Config,
     IP, UNWANTED, WANTED,
 };
@@ -132,11 +132,13 @@ fn main() {
                     }
                 })
                 .collect();
-            info!("New entries:");
+
+            let all_current_spammers = all_current_spammers(&ips).unwrap_or_default();
             match new_seen.lock() {
                 Ok(seen_lock) => {
                     let block_list: String = seen_lock
                         .iter()
+                        .filter(|(ip_key, _)| !all_current_spammers.contains(*ip_key))
                         .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
                         .collect();
                     info!("{block_list}");
@@ -146,8 +148,7 @@ fn main() {
                 }
             }
             info!("Scan completed.");
-
-            add_ip_to_spammers(&ips)
+            add_ip_to_spammers(&ips, &all_current_spammers)
                 .and_then(|_| reload_firewall_rules())
                 .map_err(|err| {
                     info!("Firewall reload skipped.");
