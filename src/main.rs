@@ -141,7 +141,9 @@ fn main() {
                         .filter(|(ip_key, _)| !all_current_spammers.contains(*ip_key))
                         .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
                         .collect();
-                    info!("{block_list}");
+                    if !block_list.is_empty() {
+                        info!("New blocks:\n{block_list}\n");
+                    }
                 }
                 Err(e) => {
                     error!("Fail: {e}");
