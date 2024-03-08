@@ -14,7 +14,7 @@ pub use tracing::{debug, error, info, instrument, trace, warn};
 
 
 lazy_static! {
-    pub static ref IP: Regex = Regex::new(r"^(?P<ip>((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d))").unwrap();
+    pub static ref IP: Regex = Regex::new(r"(?P<ip>((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d))").expect("IP regex should work");
 
     /// WANTED have higher priority over UNWANTED
     pub static ref WANTED: Regex = Config::wanted();
