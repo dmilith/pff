@@ -65,9 +65,12 @@ fn main() {
         env!("CARGO_PKG_VERSION")
     );
     let access_log = Config::access_log();
-    let decoded_log = File::open(&access_log).and_then(read_file_bytes);
-    info!("Loading log: {access_log}");
-    let maybe_log = decoded_log
+    let system_log = Config::system_log();
+    let decoded_log = File::open(&*access_log).and_then(read_file_bytes);
+    let decoded_system_log = File::open(&*system_log).and_then(read_file_bytes);
+
+    info!("Loading logs: {access_log}, {system_log}");
+    let maybe_access_log = decoded_log
         .map(|input_data| {
             let input_data_length = input_data.len();
             debug!("Input data length: {input_data_length}");
@@ -92,74 +95,102 @@ fn main() {
                 })
                 .collect::<Vec<_>>()
         });
-    match maybe_log {
-        Ok(lines) => {
-            // format: [key: IPv4, value: line]
-            let new_seen = Arc::new(Mutex::new(HashMap::new()));
-            let ips = lines
-                .par_iter()
+    let maybe_system_log = decoded_system_log
+        .map(|input_data| {
+            let input_data_length = input_data.len();
+            debug!("Input data length: {input_data_length}");
+            if Config::buffer() == 0 || Config::buffer() >= input_data_length {
+                debug!("Loading full uncompressed input file of size: {input_data_length}.");
+                input_data
+            } else {
+                let buffer = input_data_length - Config::buffer();
+                debug!("The uncompressed input file is now at position: {buffer}.");
+                input_data.into_par_iter().skip(buffer).collect()
+            }
+        })
+        .map(|input_contents| {
+            String::from_utf8_lossy(&input_contents)
+                .split('\n')
                 .filter_map(|line| {
-                    trace!("Processling line: '{line}'");
-                    match &IP.captures(line) {
-                        Some(ip_match) => {
-                            let ip = &ip_match[0];
-                            let ip_str = ip.to_string();
-                            match new_seen.lock() {
-                                Ok(mut seen_lock) => {
-                                    if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
-                                        None
-                                    } else if UNWANTED.is_match(line)
-                                        && !seen_lock.contains_key(&ip_str)
-                                    {
-                                        seen_lock.insert(ip_str.to_owned(), line);
-                                        Some(ip_str)
-                                    } else {
-                                        None
-                                    }
-                                }
-                                Err(e) => {
-                                    error!("Error: {e}");
-                                    None
-                                }
+                    if line.is_empty() || is_partial(line) {
+                        None
+                    } else {
+                        Some(line.to_string())
+                    }
+                })
+                .collect::<Vec<_>>()
+        });
+
+    // combine both logs
+    let lines = [
+        maybe_access_log.unwrap_or_default(),
+        [String::from("\n")].to_vec(),
+        maybe_system_log.unwrap_or_default(),
+    ]
+    .concat();
+
+    // format: [key: IPv4, value: line]
+    let new_seen = Arc::new(Mutex::new(HashMap::new()));
+    let ips = lines
+        .par_iter()
+        .filter_map(|line| {
+            trace!("Processling line: '{line}'");
+            match &IP.captures(line) {
+                Some(ip_match) => {
+                    let ip = &ip_match[0];
+                    let ip_str = ip.to_string();
+                    match new_seen.lock() {
+                        Ok(mut seen_lock) => {
+                            if !WANTED.is_match(line) && !UNWANTED.is_match(line) {
+                                None
+                            } else if UNWANTED.is_match(line)
+                                && !seen_lock.contains_key(&ip_str)
+                            {
+                                seen_lock.insert(ip_str.to_owned(), line);
+                                Some(ip_str)
+                            } else {
+                                None
                             }
                         }
-                        None => {
-                            warn!("No IPv4 match in line: '{line}'. Skipping it");
+                        Err(e) => {
+                            error!("Error: {e}");
                             None
                         }
                     }
-                })
-                .collect();
-            info!("Scan completed.");
-
-            let all_current_spammers = all_current_spammers(&ips).unwrap_or_default();
-            match new_seen.lock() {
-                Ok(seen_lock) => {
-                    let block_list: String = seen_lock
-                        .iter()
-                        .filter(|(ip_key, _)| all_current_spammers.contains(*ip_key))
-                        .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
-                        .collect();
-                    if !block_list.is_empty() {
-                        info!("New blocks:\n\n{block_list}");
-                    }
                 }
-                Err(e) => {
-                    error!("Fail: {e}");
+                None => {
+                    debug!("No IPv4 match in line: '{line}'. Skipping it");
+                    None
                 }
             }
-            add_ip_to_spammers(&ips, &all_current_spammers)
-                .and_then(|_| reload_firewall_rules())
-                .map_err(|err| {
-                    info!("Firewall reload skipped.");
-                    debug!("Skipped because: {err}");
-                })
-                .unwrap_or_default();
+        })
+        .collect();
+    info!("Scan completed.");
 
-            info!("Spammers processing is now complete.");
+    let all_current_spammers = all_current_spammers(&ips).unwrap_or_default();
+    #[allow(clippy::format_collect)]
+    match new_seen.lock() {
+        Ok(seen_lock) => {
+            let block_list: String = seen_lock
+                .iter()
+                .filter(|(ip_key, _)| all_current_spammers.contains(*ip_key))
+                .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
+                .collect();
+            if !block_list.is_empty() {
+                info!("New blocks:\n\n{block_list}");
+            }
         }
-        Err(reason) => {
-            error!("Error reading file: {access_log}, the error is: {reason}")
+        Err(e) => {
+            error!("Fail: {e}");
         }
     }
+    add_ip_to_spammers(&ips, &all_current_spammers)
+        .and_then(|_| reload_firewall_rules())
+        .map_err(|err| {
+            info!("Firewall reload skipped.");
+            debug!("Skipped because: {err}");
+        })
+        .unwrap_or_default();
+
+    info!("Spammers processing is now complete.");
 }

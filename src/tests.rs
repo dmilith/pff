@@ -63,6 +63,7 @@ fn test_regex_match_wanted_and_unwanted() {
         r#"67.71.13.196 - - [10/Nov/2021:06:59:29 +0100] "GET /login.action HTTP/1.1" 404 153 "-" "l9explore/1.3.0""#,
         r#"188.147.102.254 - - [09/May/2022:23:30:22 +0200] "POST /php/event.php HTTP/1.1" 301 162 "http://gminagniewino2.home.pl/" "Mozilla/5.0 (Linux; Android 10; VOG-L29) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Mobile Safari/537.36""#,
         r#"20.212.112.27 - - [09/May/2022:23:45:39 +0200] "GET ///sito/wp-includes/wlwmanifest.xml HTTP/1.1" 404 548 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0 Safari/537.36""#,
+        r#"PAM: Authentication error for illegal user"#,
     ];
 
     let w_reg = &WANTED;

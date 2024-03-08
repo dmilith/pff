@@ -1,5 +1,6 @@
 use regex::Regex;
 use ron::ser::{to_string_pretty, PrettyConfig};
+use std::sync::Arc;
 
 use crate::*;
 use serde::{Deserialize, Serialize};
@@ -18,8 +19,9 @@ pub const POSSIBLE_CONFIGS: &[&str] =
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    access_log: String,
-    spammers_file: String,
+    access_log: Arc<str>,
+    system_log: Arc<str>,
+    spammers_file: Arc<str>,
     buffer: usize,
 
     #[serde(with = "serde_regex")]
@@ -33,11 +35,12 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            spammers_file: "/etc/spammers".to_string(),
-            access_log: "/Services/Nginx/logs/access.log".to_string(),
+            spammers_file: "/etc/spammers".into(),
+            access_log: "/Services/Nginx/logs/access.log".into(),
+            system_log: "/var/log/messages".into(),
             buffer: BUFFER_TO_CHECK_IN_BYTES,
-            wanted: Regex::new(r"(\.tgz|\.ttf|\.bz2|\.gz|\.xz|\.zfsx|\.zfsp|/robots\.txt|/security\.txt|favicon\.ico|\.m[4kop][34av]|sitemap.xml|/.well-known|\.svg|verknowsys|\.wasm|[[:alnum:]]{32}\.p[dn][fg]|192\.168\.\d{1,3}\.\d{1,3}|127\.0\.0\.1|10\.0\.0\.d{1,3})").unwrap(),
-            unwanted: Regex::new(r"(\.php|\.lua|XDEBUG|config\.|login\.|\.DS_Store|mifs|\.axd|wp-*|\.aws|\.[axy]ml|\.[aj]sp+|microsoft|\.env|\\x\d+|\.cgi|cgi-bin|HNAP1|formLogin|owa/auth/x|/dev|/tmp|/var/tmp)").unwrap(),
+            wanted: Regex::new(r"(\.tgz|\.ttf|\.bz2|\.gz|\.xz|\.zfsx|\.zfsp|/robots\.txt|/security\.txt|favicon\.ico|\.m[4kop][34av]|sitemap.xml|/.well-known|\.svg|verknowsys|\.wasm|[[:alnum:]]{32}\.p[dn][fg]|192\.168\.\d{1,3}\.\d{1,3}|127\.0\.0\.1|10\.0\.0\.d{1,3})").expect("Wanted regex should work"),
+            unwanted: Regex::new(r"(\.php|\.lua|XDEBUG|config\.|login\.|\.DS_Store|mifs|\.axd|wp-*|\.aws|\.[axy]ml|\.[aj]sp+|microsoft|\.env|\\x\d+|\.cgi|cgi-bin|HNAP1|formLogin|owa/auth/x|/dev|/tmp|/var/tmp|PAM: Authentication error for illegal user)").expect("Unwanted regex should work"),
         }
     }
 }
@@ -57,7 +60,7 @@ impl Config {
                 if !Path::new(file).exists() {
                     None
                 } else {
-                    Some(file.to_string())
+                    Some(file.to_owned())
                 }
             })
             .take(1)
@@ -120,8 +123,12 @@ impl Config {
         Config::default()
     }
 
-    pub fn access_log() -> String {
+    pub fn access_log() -> Arc<str> {
         Config::load().access_log
+    }
+
+    pub fn system_log() -> Arc<str> {
+        Config::load().system_log
     }
 
     pub fn buffer() -> usize {
@@ -137,6 +144,6 @@ impl Config {
     }
 
     pub fn spammers_file() -> String {
-        Config::load().spammers_file
+        Config::load().spammers_file.to_string()
     }
 }

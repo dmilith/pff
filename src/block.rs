@@ -16,7 +16,7 @@ pub fn all_current_spammers(ips: &Vec<String>) -> Result<String, Error> {
     if let Ok(mut inner_buf) = buf.lock() {
         OpenOptions::new()
             .read(true)
-            .open(Config::spammers_file())?
+            .open(&*Config::spammers_file())?
             .read_to_string(&mut inner_buf)?;
     }
 
@@ -63,9 +63,8 @@ pub fn add_ip_to_spammers(ips: &Vec<String>, all_spammers: &String) -> Result<()
         ))
     } else {
         OpenOptions::new()
-            .write(true)
             .append(true)
-            .open(Config::spammers_file())
+            .open(&*Config::spammers_file())
             .and_then(|mut file| {
                 debug!("Written to file: {file:?} all_spammers: {all_spammers:?}");
                 file.write_all(all_spammers.as_bytes())
