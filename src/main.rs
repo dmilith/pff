@@ -1,4 +1,5 @@
 use rayon::prelude::*;
+use std::fmt::Write;
 use tracing::{debug, error, info, instrument, trace, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -168,20 +169,21 @@ fn main() {
     info!("Scan completed.");
 
     let all_current_spammers = all_current_spammers(&ips).unwrap_or_default();
-    #[allow(clippy::format_collect)]
     match new_seen.lock() {
         Ok(seen_lock) => {
             let block_list: String = seen_lock
                 .iter()
                 .filter(|(ip_key, _)| all_current_spammers.contains(*ip_key))
-                .map(|(k, v)| format!("Blocked: {k}, Request line: {v}\n"))
-                .collect();
+                .fold(String::new(), |mut result, (ipv4, line)| {
+                    let _ = writeln!(result, "Blocked: '{ipv4}', Request line: '{line}'");
+                    result
+                });
             if !block_list.is_empty() {
-                info!("New blocks:\n\n{block_list}");
+                info!("Newly blocked:\n\n{block_list}\n\n");
             }
         }
         Err(e) => {
-            error!("Fail: {e}");
+            error!("Failed to acquire lock. Failure: {e}");
         }
     }
     add_ip_to_spammers(&ips, &all_current_spammers)
