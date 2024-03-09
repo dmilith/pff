@@ -55,6 +55,14 @@ block drop out quick to <blocked>
 
 3. `cargo install pff --locked` to install. On Sofin-enabled systems, just do: `s i pff`.
 
+4. It's also advised to have a cleanup cronjob running every day at 6 am, like this: `6 0 * * * truncate -s0 /etc/spammers && pfctl -Fall -f /etc/pf.conf`. It means that every day the list of blocked IPs is built from the scratch.
+
+5. Also on high-traffic hosts, it's a good idea to rotate the logs. Here on FreeBSD, the Nginx runs as a `web-user` and the configuration is stored under the`/etc/newsyslog.conf.d/nginx.conf` file:
+
+```conf
+# [logfile name]                [owner-group] [mode] [count] [size]      [when] [flags] [path to pid file]           [signal]
+/Services/Nginx/logs/access.log web-user:staff 640    9       102400      *      -       /Services/Nginx/service.pid  1
+```
 
 ## License:
 * Released under the [BSD](http://opensource.org/licenses/BSD-2-Clause) license.
