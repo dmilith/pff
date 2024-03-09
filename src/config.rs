@@ -53,7 +53,7 @@ impl Config {
 
 
     /// Determine a default config file
-    pub fn find_config() -> Option<String> {
+    pub fn find_config() -> Option<Arc<str>> {
         let config = config::POSSIBLE_CONFIGS
             .iter()
             .filter_map(|file| {
@@ -68,7 +68,7 @@ impl Config {
         if config.is_empty() {
             None
         } else {
-            Some(config)
+            Some(config.into())
         }
     }
 
@@ -77,7 +77,7 @@ impl Config {
         match Config::find_config() {
             Some(log) => {
                 debug!("Found configuration file: {log}");
-                match File::open(&log) {
+                match File::open(&*log) {
                     Ok(mut read_file) => {
                         let mut buf = String::new();
                         let _ = read_file.read_to_string(&mut buf);
@@ -143,7 +143,7 @@ impl Config {
         Config::load().unwanted
     }
 
-    pub fn spammers_file() -> String {
-        Config::load().spammers_file.to_string()
+    pub fn spammers_file() -> Arc<str> {
+        Config::load().spammers_file
     }
 }

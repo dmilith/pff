@@ -166,12 +166,11 @@ fn main() {
             }
         })
         .collect();
-    info!("Scan completed.");
 
     let all_current_spammers = all_current_spammers(&ips).unwrap_or_default();
     match new_seen.lock() {
         Ok(seen_lock) => {
-            let block_list: String = seen_lock
+            let block_list = seen_lock
                 .iter()
                 .filter(|(ip_key, _)| all_current_spammers.contains(*ip_key))
                 .fold(String::new(), |mut result, (ipv4, line)| {
@@ -189,10 +188,8 @@ fn main() {
     add_ip_to_spammers(&ips, &all_current_spammers)
         .and_then(|_| reload_firewall_rules())
         .map_err(|err| {
-            info!("Firewall reload skipped.");
-            debug!("Skipped because: {err}");
+            debug!("Skipped firewall reload because: {err}");
         })
         .unwrap_or_default();
-
-    info!("Spammers processing is now complete.");
+    info!("Scan completed.");
 }
