@@ -1,13 +1,13 @@
 use rayon::prelude::*;
 use std::fmt::Write;
 use tracing::{debug, error, info, instrument, trace, warn};
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt};
 
 
 use pff::{
+    IP, UNWANTED, WANTED,
     block::{add_ip_to_spammers, all_current_spammers, reload_firewall_rules},
     config::Config,
-    IP, UNWANTED, WANTED,
 };
 use std::{
     collections::HashMap,

@@ -1,5 +1,5 @@
 use regex::Regex;
-use ron::ser::{to_string_pretty, PrettyConfig};
+use ron::ser::{PrettyConfig, to_string_pretty};
 use std::sync::Arc;
 
 use crate::*;
@@ -106,6 +106,7 @@ impl Config {
                         debug!("Writing the config: {config}");
                         let mut file = OpenOptions::new()
                             .create(true)
+                            .truncate(true)
                             .write(true)
                             .open(log)
                             .expect("The configuration file should be in a writable place!");

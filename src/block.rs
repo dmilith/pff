@@ -3,7 +3,7 @@ use crate::{config::Config, *};
 use rayon::prelude::*;
 use std::{
     fs::OpenOptions,
-    io::{Error, ErrorKind, Read, Write},
+    io::{Error, Read, Write},
     process::{Command, Stdio},
     sync::{Arc, Mutex},
 };
@@ -49,16 +49,14 @@ pub fn all_current_spammers(ips: &Vec<String>) -> Result<String, Error> {
 pub fn add_ip_to_spammers(ips: &Vec<String>, all_spammers: &String) -> Result<(), Error> {
     if ips.is_empty() {
         debug!("No need to reload firewall");
-        return Err(Error::new(
-            ErrorKind::Other,
+        return Err(Error::other(
             "Empty IP list, no need to reload the firewall",
         ));
     }
 
     if all_spammers.is_empty() {
         debug!("No need to reload firewall");
-        Err(Error::new(
-            ErrorKind::Other,
+        Err(Error::other(
             "List of IPs is empty, no need to reload the firewall",
         ))
     } else {
