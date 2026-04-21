@@ -1,7 +1,7 @@
 [package]
 name = "pff"
 version = "0.6.2"
-edition = "2021"
+edition = "2024"
 description = "pf filter - parse Nginx access.log for unwanted regexp patterns, and block them on the PF firewall"
 repository = "https://github.com/dmilith/pff"
 license = "MIT"
